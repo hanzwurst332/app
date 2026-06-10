@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Kamera App</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="manifest.json">
+    <style>
+        body { 
+            font-family: -apple-system, sans-serif; 
+            background: #1c1c1e; 
+            color: white; 
+            margin: 0; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            height: 100vh; 
+            text-align: center; 
+            overflow: hidden;
+        }
+        #mainInterface { display: block; padding: 20px; }
+        #imageViewer { 
+            display: none; 
+            width: 100vw; 
+            height: 100vh; 
+            background: black;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        #kameraBild { max-width: 100%; max-height: 100%; object-fit: contain; }
+        #closeBtn { 
+            position: absolute; top: 40px; right: 20px; font-size: 24px; color: white; 
+            background: rgba(0,0,0,0.6); padding: 12px 18px; border-radius: 50%; font-weight: bold;
+        }
+        button { 
+            padding: 15px 30px; background: #007aff; color: white; border: none; 
+            border-radius: 12px; font-weight: bold; font-size: 16px; margin-top: 20px; 
+        }
+    </style>
+</head>
+<body>
+
+    <div id="mainInterface">
+        <h1>Kamera PWA</h1>
+        <p>Geladen über GitHub Pages</p>
+        <button onclick="requestPush()">Push aktivieren</button>
+    </div>
+
+    <div id="imageViewer">
+        <span id="closeBtn" onclick="closeImage()">✕</span>
+        <img id="kameraBild" src="" alt="Live-Bild">
+    </div>
+
+    <script>
+        // Service Worker registrieren
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').then(() => {
+                console.log("⚡ Service Worker aktiv!");
+            });
+        }
+
+        // URL auf Bild-Parameter prüfen
+        window.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const imageUrl = urlParams.get('imageUrl');
+            if (imageUrl) { showImage(imageUrl); }
+        });
+
+        function showImage(url) {
+            document.getElementById('mainInterface').style.display = 'none';
+            document.getElementById('imageViewer').style.display = 'flex';
+            document.getElementById('kameraBild').src = url;
+        }
+
+        function closeImage() {
+            document.getElementById('imageViewer').style.display = 'none';
+            document.getElementById('mainInterface').style.display = 'block';
+            document.getElementById('kameraBild').src = '';
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+
+        function requestPush() {
+            Notification.requestPermission().then(permission => {
+                if (permission === 'granted') {
+                    navigator.serviceWorker.ready.then(reg => {
+                        reg.pushManager.subscribe({
+                            userVisibleOnly: true,
+                            // Nutze hier deinen generierten VAPID Public Key aus PowerShell
+                            applicationServerKey: urlBase64ToUint8Array('BDArFjX_dUCVI9iPDrud07Jc-zmuShZZrdAigTSpbBr6kPveCd98AHGU16kZXo0aHz9ms-TZltvzvUqLytU497w')
+                        }).then(sub => {
+                            console.log(JSON.stringify(sub));
+                            alert('Erfolgreich! Subscription steht in der PC-Konsole.');
+                        });
+                    });
+                }
+            });
+        }
+
+        function urlBase64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+            const rawData = window.atob(base64);
+            const outputArray = new Uint8Array(rawData.length);
+            for (let i = 0; i < rawData.length; ++i) { outputArray[i] = rawData.charCodeAt(i); }
+            return outputArray;
+        }
+    </script>
+</body>
+</html>
