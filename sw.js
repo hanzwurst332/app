@@ -1,28 +1,24 @@
 self.addEventListener('push', function(event) {
-    let data = { title: 'Kamera', body: 'Signal vom Server', image: '' };
-    if (event.data) {
-        try { data = event.data.json(); } catch (e) { data.body = event.data.text(); }
+    if (!event.data) return;
+    
+    try {
+        // Das vom PC gesendete JSON-Paket entpacken
+        const appPayload = event.data.json();
+        
+        // Suche das aktive, geöffnete App-Fenster auf dem iPhone
+        event.waitUntil(
+            self.clients.matchAll({ type: 'window' }).then(allClients => {
+                for (const client of allClients) {
+                    // Schiebe den Code direkt ins Frontend rüber
+                    client.postMessage(appPayload);
+                }
+            })
+        );
+    } catch (err) {
+        console.log("Fehler bei stummer Datenweiterleitung im Hintergrund.");
     }
-
-    const options = {
-        body: data.body,
-        icon: 'https://via.placeholder.com/192',
-        badge: 'https://via.placeholder.com/192',
-        vibrate: [200, 100, 200],
-        data: { kameraBildUrl: data.image }
-    };
-
-    event.waitUntil(
-        self.registration.showNotification(data.title, options)
-    );
 });
 
-self.addEventListener('notificationclick', function(event) {
-    event.notification.close();
-    const imageUrl = event.notification.data.kameraBildUrl;
-    // Öffnet die App und übergibt das Bild
-    const urlToOpen = './?imageUrl=' + encodeURIComponent(imageUrl);
-    event.waitUntil(
-        clients.openWindow(urlToOpen)
-    );
-});
+// Verhindert, dass alte Instanzen den neuen Code blockieren
+self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', event => event.waitUntil(self.clients.claim()));
