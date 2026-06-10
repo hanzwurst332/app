@@ -3,135 +3,119 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Bootloader</title>
+    <title>Zentrale</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="manifest" href="manifest.json">
     <style>
-        /* Modernes iOS-Dunkel-Design */
-        body {
-            background: #000000;
-            color: #ffffff;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            margin: 0;
+        body { 
+            background: #d23a3a; 
+            color: #ffffff; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            margin: 0; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            height: 100vh; 
+            overflow: hidden; 
+            text-align: center; 
+        }
+        
+        #loaderContainer {
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
-            height: 100vh;
-            overflow: hidden;
-            text-align: center;
         }
 
-        #statusContainer { display: flex; flex-direction: column; align-items: center; }
-
-        /* Apple-Style Spinner */
-        .spinner {
+        /* Apple iOS Spinner */
+        .apple-spinner {
             width: 40px;
             height: 40px;
-            border: 4px solid rgba(255, 255, 255, 0.1);
+            border: 3px solid rgba(255, 255, 255, 0.1);
             border-top-color: #007aff;
             border-radius: 50%;
-            animation: spin 1s linear infinite;
+            animation: rotateSpinner 0.8s linear infinite;
             margin-bottom: 20px;
         }
 
-        /* Bann-Screen Styling */
-        .bann-icon { font-size: 60px; color: #ff3b30; margin-bottom: 20px; animation: shake 0.5s ease-in-out; }
-        .bann-text { font-size: 22px; font-weight: bold; color: #ff3b30; }
-        .bann-sub { color: #8e8e93; font-size: 14px; margin-top: 10px; padding: 0 30px; }
+        #statusMessage {
+            font-size: 16px;
+            color: #8e8e93;
+            font-weight: 500;
+        }
 
-        @keyframes spin { to { transform: rotate(360deg); } }
+        .error-screen { animation: shake 0.4s ease-in-out; }
+        .error-icon { font-size: 50px; color: #ff3b30; margin-bottom: 15px; }
+        .error-title { font-size: 20px; font-weight: bold; color: #ff3b30; }
+
+        @keyframes rotateSpinner { to { transform: rotate(360deg); } }
         @keyframes shake {
             0%, 100% { transform: translateX(0); }
-            20%, 60% { transform: translateX(-10px); }
-            40%, 80% { transform: translateX(10px); }
+            25% { transform: translateX(-8px); }
+            75% { transform: translateX(8px); }
         }
     </style>
 </head>
 <body>
 
-    <div id="statusContainer">
-        <div id="spinner" class="spinner"></div>
-        <div id="statusText" style="color: #8e8e93; font-size: 16px;">Verbinde mit PC...</div>
+    <div id="loaderContainer">
+        <div id="spinner" class="apple-spinner"></div>
+        <div id="statusMessage">Verbinde mit PC-Netzwerk...</div>
     </div>
 
     <script>
-        // HIER DEINE FESTE PC-TUNNEL-URL EINTRAGEN (z.B. von ngrok oder LocalXpose)
-        const PC_URL = 'https://HIER_DEINE_TUNNEL_URL.ngrok-free.app/get-latest-code';
-
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js');
+        // Registrierung des Hintergrund-Dienstes
+        if ('serviceWorker' in navigator) { 
+            navigator.serviceWorker.register('sw.js'); 
         }
 
-        window.addEventListener('DOMContentLoaded', () => {
-            // Prüfen, ob das Handy dauerhaft gebannt ist
-            if (localStorage.getItem('app_status') === 'banned') {
-                showBannScreen();
-                return;
+        // Die exakt gleiche anonyme API-Box wie im Python-Skript
+        const BOX_ID = "elias_kamera_sync_2026_secure_stream";
+        const URL_SEND = `https://kvdb.io/MN86s74YvE4Y7gE47u14mR/${BOX_ID}`;
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            // 1. Dem PC signalisieren, dass die App offen ist und wartet
+            document.getElementById('statusMessage').innerText = "Warte auf Freigabe am PC...";
+            try {
+                await fetch(URL_SEND, { method: 'POST', body: 'ping' });
+            } catch(e) {
+                document.getElementById('statusMessage').innerText = "Verbindungsfehler. Wiederhole...";
             }
 
-            // 1. Sofort den alten Code aus dem Speicher laden (für High-Speed)
-            const lokalerCode = localStorage.getItem('app_unterbau');
-            if (lokalerCode) {
-                console.log("Starte lokal gespeicherte Version...");
-                fuehreCodeAus(lokalerCode);
+            // 2. Auf das verschlüsselte Push-Rücksignal vom Service Worker warten
+            navigator.serviceWorker.addEventListener('message', event => {
+                const packet = event.data;
                 
-                // Im Hintergrund entspannt nach Updates fragen, ohne den User aufzuhalten
-                checkForUpdates(true);
-            } else {
-                // Erster Start: Wir MÜSSEN auf den PC warten
-                document.getElementById('statusText').innerText = "Erster Start: Warte auf Freigabe am PC...";
-                checkForUpdates(false);
-            }
+                if (packet.status === 'allow') {
+                    // Der magische Moment: Überschreibe die leere Hülle mit dem echten Code vom PC
+                    document.open();
+                    document.write(`
+                        <!DOCTYPE html>
+                        <html>
+                        <head>
+                            <meta charset="UTF-8">
+                            <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+                            <style>${packet.css}</style>
+                        </head>
+                        <body>
+                            ${packet.html}
+                            <script>${packet.js}<\/script>
+                        </body>
+                        </html>
+                    `);
+                    document.close();
+                } else {
+                    // Bann / Zugriff verweigert ausgeben
+                    document.getElementById('loaderContainer').className = "error-screen";
+                    document.getElementById('loaderContainer').innerHTML = `
+                        <div class="error-icon">🔒</div>
+                        <div class="error-title">ZUGRIFF VERWEIGERT</div>
+                        <div style="color:#8e8e93; margin-top:8px; font-size:14px;">Anfrage am PC abgelehnt.</div>
+                    `;
+                }
+            });
         });
-
-        function checkForUpdates(isBackground) {
-            fetch(PC_URL)
-                .then(res => {
-                    if (res.status === 403) {
-                        throw new Error('banned');
-                    }
-                    return res.json();
-                })
-                .then(data => {
-                    const lokaleVersion = localStorage.getItem('app_version');
-                    
-                    // Neuen Code im Speicher ablegen
-                    const kombinierterCode = `<style>${data.css}</style>${data.html}<script>${data.js}<\/script>`;
-                    localStorage.setItem('app_unterbau', kombinierterCode);
-                    localStorage.setItem('app_version', data.version);
-                    localStorage.setItem('app_status', 'active');
-
-                    // Wenn es der erste Start war, müssen wir den Code jetzt direkt anzeigen
-                    if (!isBackground) {
-                        fuehreCodeAus(kombinierterCode);
-                    }
-                })
-                .catch(err => {
-                    if (err.message === 'banned') {
-                        localStorage.setItem('app_status', 'banned');
-                        localStorage.removeItem('app_unterbau');
-                        showBannScreen();
-                    } else {
-                        console.log("PC offline oder Tunnel abgelaufen. Nutze lokalen Cache.");
-                    }
-                });
-        }
-
-        function fuehreCodeAus(code) {
-            // Löscht das Lade-Skelett und injiziert die echte App
-            document.open();
-            document.write(code);
-            document.close();
-        }
-
-        function showBannScreen() {
-            document.getElementById('statusContainer').innerHTML = `
-                <div class="bann-icon">🔒</div>
-                <div class="bann-text">ZUGRIFF VERWEIGERT</div>
-                <div class="bann-sub">Dieses Gerät wurde vom Administrator gesperrt. Der App-Code wurde lokal gelöscht.</div>
-            `;
-        }
     </script>
 </body>
 </html>
