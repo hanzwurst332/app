@@ -1,32 +1,5 @@
-const CACHE_NAME = 'kamera-app-v1';
-const ASSETS = [
-  './',
-  './index.html',
-  './manifest.json'
-];
-
-// 1. Blitzschnelles Laden: Dateien lokal auf dem iPhone cachen
-self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => {
-      return cache.addAll(ASSETS);
-    })
-  );
-});
-
-// Cache beim Start direkt abfragen
-self.addEventListener('fetch', event => {
-  event.respondWith(
-    caches.match(event.request).then(response => {
-      return response || fetch(event.request);
-    })
-  );
-});
-
-// 2. Push-Nachrichten empfangen
 self.addEventListener('push', function(event) {
-    let data = { title: 'Haustür', body: 'Es hat geklingelt!', image: 'https://picsum.photos/600/400' };
-    
+    let data = { title: 'Kamera', body: 'Signal vom Server', image: '' };
     if (event.data) {
         try { data = event.data.json(); } catch (e) { data.body = event.data.text(); }
     }
@@ -44,14 +17,11 @@ self.addEventListener('push', function(event) {
     );
 });
 
-// 3. Klick auf Notification verarbeiten
 self.addEventListener('notificationclick', function(event) {
     event.notification.close();
     const imageUrl = event.notification.data.kameraBildUrl;
-    
-    // GitHub Pages nutzt Unterordner, daher hängen wir den Parameter flexibel an
+    // Öffnet die App und übergibt das Bild
     const urlToOpen = './?imageUrl=' + encodeURIComponent(imageUrl);
-
     event.waitUntil(
         clients.openWindow(urlToOpen)
     );

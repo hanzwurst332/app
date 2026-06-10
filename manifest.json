@@ -1,21 +1,12 @@
-
 {
-  "name": "Kamera Smart App",
+  "name": "Macher Kamera",
   "short_name": "Kamera",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#1c1c1e",
-  "theme_color": "#1c1c1e",
+  "background_color": "#000000",
+  "theme_color": "#000000",
   "icons": [
-    {
-      "src": "https://via.placeholder.com/192",
-      "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "https://via.placeholder.com/512",
-      "sizes": "512x512",
-      "type": "image/png"
-    }
+    { "src": "https://via.placeholder.com/192", "sizes": "192x192", "type": "image/png" },
+    { "src": "https://via.placeholder.com/512", "sizes": "512x512", "type": "image/png" }
   ]
 }
